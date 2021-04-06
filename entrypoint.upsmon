@@ -1,0 +1,80 @@
+#!/bin/bash
+
+set -e
+
+# Configure: upsmon
+if [[ ! -e "$EP_RUN" ]] ; then
+	log "Configuring $(basename $0) for first run ..."
+
+	# Generate keypairs ...
+	if [[ -e $EP_SECRETS_ROOT/upsmonca.crt && -e $EP_SECRETS_ROOT/upsmon.crt && -e $EP_SECRETS_ROOT/upsmon.key ]] ; then
+		log "Importing upsmonca.crt, upsmon.crt, and upsmon.key from secrets ..."
+		install --group=ssl-cert --mode=0640 --owner=root $EP_SECRETS_ROOT/upsmon.key /etc/ssl/private/
+		install --group=root --mode=0644 --owner=root $EP_SECRETS_ROOT/upsmon{,ca}.crt /etc/ssl/certs/
+		ln --symbolic /etc/ssl/certs/upsmonca.crt /usr/share/ca-certificates/
+		echo upsmonca.crt >> /etc/ca-certificates.conf
+		update-ca-certificates
+
+		log "Initializing trust and keystores ..."
+		# https://networkupstools.org/docs/user-manual.chunked/ar01s09.html
+		# "SSL support should be considered stable but purposely under-documented" ... oh, okay; this totally
+		# makes it okay =/ !?!
+		generate_password nss
+
+		tmp=$(mktemp)
+		install --directory --group=ssl-cert --mode=750 --owner=root ${UPSMON_NSS_PATH}
+		certutil -d ${UPSMON_NSS_PATH} -N --empty-password
+		openssl pkcs12 -export -certfile /etc/ssl/certs/upsmonca.crt -in /etc/ssl/certs/upsmon.crt -inkey /etc/ssl/private/upsmon.key -out $tmp -password "pass:${NSS_PASSWORD}"
+		pk12util -d ${UPSMON_NSS_PATH} -i $tmp -W "${NSS_PASSWORD}"
+		certutil -d ${UPSMON_NSS_PATH} -L | egrep --invert-match "Trust Attributes|SSL,|u," | awk -F"  " '{print $1}' | sed --expression="/^$/d" | \
+			while IFS=$'\n' read name ; do
+				certutil -d ${UPSMON_NSS_PATH} -M -n "$name" -t "TC,,"
+			done
+		certutil -d ${UPSMON_NSS_PATH} -L
+		rm --force $tmp
+	fi
+
+	if [[ ! -e $NUT_CONFPATH/nut.conf ]] ; then
+		log "Initializing data volume ..."
+		cp --no-clobber --recursive /usr/local/share/nut/config/* $NUT_CONFPATH/
+
+		log "Adapting configuration files ..."
+		log "	upsmon.conf"
+		cp --preserve $NUT_CONFPATH/upsmon.conf $NUT_CONFPATH/upsmon.conf.dist
+
+		if [[ -e ${UPSMON_NSS_PATH} ]] ; then
+			identity=$(certutil -d ${UPSMON_NSS_PATH} -L | egrep --invert-match "Trust Attributes|SSL,|CT," | awk -F"  " '{print $1}' | sed --expression="/^$/d")
+			sed --expression="/^# CERTIDENT \"my/cCERTIDENT \"$identity\" \"$NSS_PASSWORD\"" \
+				--expression="/^# CERTVERIFY 1/s/# //" \
+				--expression="/^# FORCESSL 1/s/# //" \
+				--in-place ${NUT_CONFPATH}/upsmon.conf
+		fi
+
+		for ups in ${!UPSMON_UPS_@}; do
+			[[ "X${!ups}" == "X" ]] && continue
+
+			name="${ups,,}"
+			name="${name#"upsmon_ups_"}"
+
+			var=${name^^}_PASSWORD
+			secrets=$EP_SECRETS_ROOT/${name}_password
+			if [[ -e $secrets ]] ; then
+				log "Importing $var from secrets ..."
+				export $var="$(<$secrets)"
+			fi
+			log "		$name"
+			echo "${!ups}" | envsubst >> $NUT_CONFPATH/upsmon.conf
+		done
+
+		log "Applying ownership and permissions ..."
+		find $NUT_CONFPATH \( \! -user root -o \! -group nut \) -exec chown root:nut {} \;
+		find $NUT_CONFPATH -type d \! -perm -0750 -exec chmod 0750 {} \;
+		find $NUT_CONFPATH -type f \! -perm -0640 -exec chmod 0640 {} \;
+	else
+		log "Skipping data volume initialization ..."
+	fi
+fi
+
+log "Resetting lock file ..."
+echo "0" | install --group nut --mode 0644 --owner nut /dev/stdin /run/nut/upsmon.pid
+
