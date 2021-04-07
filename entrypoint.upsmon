@@ -22,15 +22,16 @@ if [[ ! -e "$EP_RUN" ]] ; then
 		generate_password nss
 
 		tmp=$(mktemp)
-		install --directory --group=ssl-cert --mode=750 --owner=root ${UPSMON_NSS_PATH}
-		certutil -d ${UPSMON_NSS_PATH} -N --empty-password
+		rm --force --recursive $UPSMON_NSS_PATH
+		install --directory --group=ssl-cert --mode=750 --owner=root $UPSMON_NSS_PATH
+		certutil -d $UPSMON_NSS_PATH -N --empty-password
 		openssl pkcs12 -export -certfile /etc/ssl/certs/upsmonca.crt -in /etc/ssl/certs/upsmon.crt -inkey /etc/ssl/private/upsmon.key -out $tmp -password "pass:${NSS_PASSWORD}"
-		pk12util -d ${UPSMON_NSS_PATH} -i $tmp -W "${NSS_PASSWORD}"
-		certutil -d ${UPSMON_NSS_PATH} -L | egrep --invert-match "Trust Attributes|SSL,|u," | awk -F"  " '{print $1}' | sed --expression="/^$/d" | \
+		pk12util -d $UPSMON_NSS_PATH -i $tmp -W "$NSS_PASSWORD"
+		certutil -d $UPSMON_NSS_PATH -L | egrep --invert-match "Trust Attributes|SSL,|u," | awk -F"  " '{print $1}' | sed --expression="/^$/d" | \
 			while IFS=$'\n' read name ; do
-				certutil -d ${UPSMON_NSS_PATH} -M -n "$name" -t "TC,,"
+				certutil -d $UPSMON_NSS_PATH -M -n "$name" -t "TC,,"
 			done
-		certutil -d ${UPSMON_NSS_PATH} -L
+		certutil -d $UPSMON_NSS_PATH -L
 		rm --force $tmp
 	fi
 
@@ -42,8 +43,8 @@ if [[ ! -e "$EP_RUN" ]] ; then
 		log "	upsmon.conf"
 		cp --preserve $NUT_CONFPATH/upsmon.conf $NUT_CONFPATH/upsmon.conf.dist
 
-		if [[ -e ${UPSMON_NSS_PATH} ]] ; then
-			identity=$(certutil -d ${UPSMON_NSS_PATH} -L | egrep --invert-match "Trust Attributes|SSL,|CT," | awk -F"  " '{print $1}' | sed --expression="/^$/d")
+		if [[ -e $UPSMON_NSS_PATH ]] ; then
+			identity=$(certutil -d $UPSMON_NSS_PATH -L | egrep --invert-match "Trust Attributes|SSL,|CT," | awk -F"  " '{print $1}' | sed --expression="/^$/d")
 			sed --expression="/^# CERTIDENT \"my/cCERTIDENT \"$identity\" \"$NSS_PASSWORD\"" \
 				--expression="/^# CERTVERIFY 1/s/# //" \
 				--expression="/^# FORCESSL 1/s/# //" \
