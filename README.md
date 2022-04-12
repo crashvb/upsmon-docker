@@ -1,5 +1,10 @@
 # upsmon
 
+[![version)](https://img.shields.io/docker/v/crashvb/upsmon/latest)](https://hub.docker.com/repository/docker/crashvb/upsmon)
+[![image size](https://img.shields.io/docker/image-size/crashvb/upsmon/latest)](https://hub.docker.com/repository/docker/crashvb/upsmon)
+[![linting](https://img.shields.io/badge/linting-hadolint-yellow)](https://github.com/hadolint/hadolint)
+[![license](https://img.shields.io/github/license/crashvb/upsmon-docker.svg)](https://github.com/crashvb/upsmon-docker/blob/master/LICENSE.md)
+
 ## Overview
 
 This docker image contains [NUT](https://networkupstools.org/).
@@ -30,8 +35,8 @@ The embedded entrypoint script is located at `/etc/entrypoint.d/upsmon` and perf
 
  | Variable | Default Value | Description |
  | -------- | ------------- | ----------- |
- | UPSMON_NSS_PATH | `<nut_confpath>/nss` | The path to the NSS database. |
- | UPSMON_UPS_* | | The contents to be appended to `<nut_confpath>/upsmon.conf`. |
+ | UPSMON\_NSS\_PATH | `<nut_confpath>/nss` | The path to the NSS database. |
+ | UPSMON\_UPS\_* | | The contents to be appended to `<nut_confpath>/upsmon.conf`. |
 
 2. Volume permissions are normalized.
 

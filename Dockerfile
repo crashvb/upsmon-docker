@@ -28,9 +28,9 @@ RUN usermod --append --groups ssl-cert nut && \
 	mv ${NUT_CONFPATH} /usr/local/share/nut/config
 
 # Configure: supervisor
-ADD supervisord.upsmon.conf /etc/supervisor/conf.d/upsmon.conf
+COPY supervisord.upsmon.conf /etc/supervisor/conf.d/upsmon.conf
 
 # Configure: entrypoint
-ADD entrypoint.upsmon /etc/entrypoint.d/upsmon
+COPY entrypoint.upsmon /etc/entrypoint.d/upsmon
 
 VOLUME ${NUT_CONFPATH}
