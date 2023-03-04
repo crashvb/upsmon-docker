@@ -1,10 +1,10 @@
-FROM crashvb/supervisord:202201080446@sha256:8fe6a411bea68df4b4c6c611db63c22f32c4a455254fa322f381d72340ea7226
+FROM crashvb/supervisord:202303031721@sha256:6ff97eeb4fbabda4238c8182076fdbd8302f4df15174216c8f9483f70f163b68
 ARG org_opencontainers_image_created=undefined
 ARG org_opencontainers_image_revision=undefined
 LABEL \
 	org.opencontainers.image.authors="Richard Davis <crashvb@gmail.com>" \
-	org.opencontainers.image.base.digest="sha256:8fe6a411bea68df4b4c6c611db63c22f32c4a455254fa322f381d72340ea7226" \
-	org.opencontainers.image.base.name="crashvb/supervisord:202201080446" \
+	org.opencontainers.image.base.digest="sha256:6ff97eeb4fbabda4238c8182076fdbd8302f4df15174216c8f9483f70f163b68" \
+	org.opencontainers.image.base.name="crashvb/supervisord:202303031721" \
 	org.opencontainers.image.created="${org_opencontainers_image_created}" \
 	org.opencontainers.image.description="Image containing upsmon." \
 	org.opencontainers.image.licenses="Apache-2.0" \
@@ -32,5 +32,8 @@ COPY supervisord.upsmon.conf /etc/supervisor/conf.d/upsmon.conf
 
 # Configure: entrypoint
 COPY entrypoint.upsmon /etc/entrypoint.d/upsmon
+
+# Configure: healthcheck
+COPY healthcheck.upsmon /etc/healthcheck.d/upsmon
 
 VOLUME ${NUT_CONFPATH}

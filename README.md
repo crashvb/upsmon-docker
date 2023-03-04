@@ -49,6 +49,8 @@ The embedded entrypoint script is located at `/etc/entrypoint.d/upsmon` and perf
 ├─ etc/
 │  ├─ entrypoint.d/
 │  │  └─ upsmon
+│  ├─ healthcheck.d/
+│  │  └─ upsmon
 │  └─ supervisor/
 │     └─ config.d/
 │        └─ upsmon.conf
